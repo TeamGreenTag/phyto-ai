@@ -436,176 +436,58 @@ async function sendMessage() {
    ASK AI BACKEND
    ========================================================= */
 
-async function askAI(message, image) {
+
+    async function askAI(message, image) {
 
     const payload = {
-
         message: message,
-
         topic: selectedTopic,
-
+        system: SYSTEM_PROMPT,
         history: conversationHistory,
-
         image: image
             ? image.data
             : null,
-
         imageType: image
             ? image.type
             : null
-
     };
-
 
     const response = await fetch(
         AI_API_URL,
         {
-
             method: "POST",
-
             headers: {
                 "Content-Type": "application/json"
             },
-
             body: JSON.stringify(payload)
-
         }
     );
 
-
-    const data =
-        await response.json();
-
+    const data = await response.json();
 
     if (!response.ok) {
-
         throw new Error(
             data.error ||
             "AI backend returned an error."
         );
-
     }
-
 
     const reply =
         data.reply ||
         data.message ||
         "The AI returned an empty response.";
 
-
-    // Save conversation
-
     conversationHistory.push({
-
         role: "user",
-
         content: message || "Analyze this plant image."
-
     });
-
 
     conversationHistory.push({
-
         role: "assistant",
-
         content: reply
-
     });
-
 
     return formatAIResponse(reply);
-}
-
-    /*
-     * Prepare request.
-     */
-
-    const payload = {
-
-        message: message,
-
-        topic: selectedTopic,
-
-        system: SYSTEM_PROMPT,
-
-        image: image
-            ? image.data
-            : null,
-
-        imageType: image
-            ? image.type
-            : null
-
-    };
-
-
-    const response =
-        await fetch(
-            AI_API_URL,
-            {
-
-                method: "POST",
-
-                headers: {
-
-                    "Content-Type":
-                        "application/json"
-
-                },
-
-                body:
-                    JSON.stringify(payload)
-
-            }
-        );
-
-
-    if (!response.ok) {
-
-        throw new Error(
-            "AI backend returned an error."
-        );
-    }
-
-
-    const data =
-        await response.json();
-
-
-    /*
-     * Your backend should ideally return:
-     *
-     * {
-     *   "reply": "..."
-     * }
-     */
-
-
-    if (data.reply) {
-
-        return formatAIResponse(
-            data.reply
-        );
-    }
-
-
-    if (data.message) {
-
-        return formatAIResponse(
-            data.message
-        );
-    }
-
-
-    return `
-
-        <h3>🌱 No response</h3>
-
-        <p>
-            The AI service returned an empty response.
-        </p>
-
-    `;
 }
 
 
