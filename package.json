@@ -1,18 +1,17 @@
 {
-  "engines": {
-  "node": "24.x"
-},
-
   "name": "phyto-ai",
   "version": "1.0.0",
   "description": "PHYTO AI Plant and Botany Chatbot",
   "main": "server.js",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.3",
     "openai": "^6.0.0"
   }
 }

@@ -69,8 +69,7 @@ const topics =
  * Change this URL if your backend uses another address.
  */
 
-const AI_API_URL =
-    "https://phyto-nipgay65s-teamgreentag.vercel.app/api/chat";
+const AI_API_URL = "/api/chat";
 
 
 /*
@@ -91,6 +90,7 @@ let selectedTopic = "general";
 
 let selectedImage = null;
 
+let conversationHistory = [];
 
 /* =========================================================
    PLANT AI SYSTEM INSTRUCTIONS
@@ -439,45 +439,175 @@ async function sendMessage() {
 async function askAI(message, image) {
 
     const payload = {
+
         message: message,
+
         topic: selectedTopic,
-        system: SYSTEM_PROMPT,
-        image: image ? image.data : null,
-        imageType: image ? image.type : null
+
+        history: conversationHistory,
+
+        image: image
+            ? image.data
+            : null,
+
+        imageType: image
+            ? image.type
+            : null
+
     };
 
+
     const response = await fetch(
-        "https://phyto-mu.vercel.app/api/chat",
+        AI_API_URL,
         {
+
             method: "POST",
+
             headers: {
                 "Content-Type": "application/json"
             },
+
             body: JSON.stringify(payload)
+
         }
     );
 
-    const data = await response.json();
 
-    console.log("Vercel response:", data);
+    const data =
+        await response.json();
+
 
     if (!response.ok) {
+
         throw new Error(
             data.error ||
-            `API error: ${response.status}`
+            "AI backend returned an error."
+        );
+
+    }
+
+
+    const reply =
+        data.reply ||
+        data.message ||
+        "The AI returned an empty response.";
+
+
+    // Save conversation
+
+    conversationHistory.push({
+
+        role: "user",
+
+        content: message || "Analyze this plant image."
+
+    });
+
+
+    conversationHistory.push({
+
+        role: "assistant",
+
+        content: reply
+
+    });
+
+
+    return formatAIResponse(reply);
+}
+
+    /*
+     * Prepare request.
+     */
+
+    const payload = {
+
+        message: message,
+
+        topic: selectedTopic,
+
+        system: SYSTEM_PROMPT,
+
+        image: image
+            ? image.data
+            : null,
+
+        imageType: image
+            ? image.type
+            : null
+
+    };
+
+
+    const response =
+        await fetch(
+            AI_API_URL,
+            {
+
+                method: "POST",
+
+                headers: {
+
+                    "Content-Type":
+                        "application/json"
+
+                },
+
+                body:
+                    JSON.stringify(payload)
+
+            }
+        );
+
+
+    if (!response.ok) {
+
+        throw new Error(
+            "AI backend returned an error."
         );
     }
 
+
+    const data =
+        await response.json();
+
+
+    /*
+     * Your backend should ideally return:
+     *
+     * {
+     *   "reply": "..."
+     * }
+     */
+
+
     if (data.reply) {
-        return formatAIResponse(data.reply);
+
+        return formatAIResponse(
+            data.reply
+        );
     }
+
 
     if (data.message) {
-        return formatAIResponse(data.message);
+
+        return formatAIResponse(
+            data.message
+        );
     }
 
-    throw new Error("The AI service returned no reply.");
+
+    return `
+
+        <h3>🌱 No response</h3>
+
+        <p>
+            The AI service returned an empty response.
+        </p>
+
+    `;
 }
+
 
 /* =========================================================
    FORMAT AI RESPONSE
@@ -619,7 +749,7 @@ async function getWeather() {
 
     const data =
         await response.json();
-console.log(data);
+
 
     const current =
         data.current;
@@ -1205,7 +1335,9 @@ clearChat.addEventListener(
         }
 
 
-        chatBox.innerHTML = "";
+        conversationHistory = [];
+
+chatBox.innerHTML = "";
 
 
         addBotMessage(`

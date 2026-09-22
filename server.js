@@ -6,199 +6,302 @@ const OpenAI = require("openai");
 
 const app = express();
 
-const PORT = process.env.PORT || 3000;
 const MODEL = process.env.OPENAI_MODEL || "gpt-5.6-luna";
-
-// ===============================
-// CORS
-// ===============================
-
-app.use((req, res, next) => {
-
-    res.header(
-        "Access-Control-Allow-Origin",
-        "*"
-    );
-
-    res.header(
-        "Access-Control-Allow-Methods",
-        "GET,POST,OPTIONS"
-    );
-
-    res.header(
-        "Access-Control-Allow-Headers",
-        "Content-Type"
-    );
-
-    if (req.method === "OPTIONS") {
-        return res.sendStatus(204);
-    }
-
-    next();
-});
-
-app.use(express.json({ limit: "20mb" }));
-app.use(express.urlencoded({ extended: true, limit: "20mb" }));
-
-app.use(express.static(__dirname));
-
-app.use(express.json({ limit: "20mb" }));
-app.use(express.urlencoded({ extended: true, limit: "20mb" }));
-
-app.use(express.static(__dirname));
-
-const PHYTO_INSTRUCTIONS =
-    "You are PHYTO, an intelligent AI assistant specializing in plants, botany, agriculture, horticulture and plant science. " +
-    "Answer questions about botany, plant anatomy, morphology, physiology, taxonomy, genetics, breeding, ecology, biotechnology, " +
-    "agriculture, horticulture, crops, irrigation, soil, fertilizers, pests, insects, plant diseases, nutrient deficiencies, " +
-    "plant identification, gardening, plant care, weather effects on plants and agricultural exams. " +
-    "When a user provides a plant image, analyze visible characteristics and provide a likely identification, but do not claim " +
-    "100 percent certainty when the image is insufficient. " +
-    "For plant problems, consider disease, pests, nutrient deficiency, nutrient toxicity, water stress, temperature stress, " +
-    "sun damage, physical damage and soil problems. Do not present uncertain diagnoses as confirmed diagnoses. " +
-    "For fertilizers and pesticides, avoid giving blindly fixed doses without knowing the plant, product, concentration, " +
-    "growth stage and application method. " +
-    "Give clear, friendly and practical answers. Use headings and bullet points when useful. " +
-    "You are PHYTO.";
-
-if (!process.env.OPENAI_API_KEY) {
-    console.log("WARNING: OPENAI_API_KEY is missing from .env");
-}
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
 
+
+// =========================================================
+// MIDDLEWARE
+// =========================================================
+
+app.use(express.json({
+    limit: "20mb"
+}));
+
+app.use(express.urlencoded({
+    extended: true,
+    limit: "20mb"
+}));
+
+app.use(express.static(__dirname));
+
+
+// =========================================================
+// PHYTO SYSTEM INSTRUCTIONS
+// =========================================================
+
+const PHYTO_INSTRUCTIONS = `
+You are PHYTO, the GreenTag AI assistant.
+
+You specialize in:
+
+- Botany
+- Plant science
+- Agriculture
+- Horticulture
+- Plant identification
+- Plant anatomy
+- Plant physiology
+- Taxonomy
+- Genetics
+- Plant breeding
+- Ecology
+- Plant biotechnology
+- Crops
+- Irrigation
+- Soil science
+- Fertilizers
+- Plant diseases
+- Plant pests
+- Nutrient deficiencies
+- Gardening
+- Plant care
+- Agricultural exams
+
+When a user provides a plant image, analyze visible characteristics and provide
+a likely identification. Never claim 100% certainty when the image is insufficient.
+
+For plant health problems, consider:
+
+- Disease
+- Pest
+- Nutrient deficiency
+- Nutrient toxicity
+- Water stress
+- Temperature stress
+- Sun damage
+- Physical damage
+- Soil problems
+
+Do not present uncertain diagnoses as confirmed diagnoses.
+
+For fertilizers and pesticides, do not blindly give fixed doses without knowing
+the plant, product, concentration, growth stage and application method.
+
+Give clear, friendly and practical answers.
+
+Use headings and bullet points when useful.
+
+You are PHYTO.
+`;
+
+
+// =========================================================
+// AI CHAT API
+// =========================================================
+
 app.post("/api/chat", async (req, res) => {
 
     try {
 
-        const message = req.body.message || "";
-        const history = Array.isArray(req.body.history)
-            ? req.body.history
-            : [];
+        const {
+            message = "",
+            history = [],
+            image = null,
+            imageType = "image/jpeg",
+            topic = "general"
+        } = req.body || {};
 
-        const image = req.body.image || null;
-        const imageType = req.body.imageType || "image/jpeg";
 
-        if (!message.trim() && !image) {
+        if (!String(message).trim() && !image) {
+
             return res.status(400).json({
                 error: "Please enter a message or upload an image."
             });
+
         }
+
 
         const input = [];
 
-        for (const item of history) {
 
-            if (!item || !item.content) {
-                continue;
+        // -----------------------------------------------------
+        // CONVERSATION HISTORY
+        // -----------------------------------------------------
+
+        if (Array.isArray(history)) {
+
+            for (const item of history) {
+
+                if (!item || !item.content) {
+                    continue;
+                }
+
+                if (
+                    item.role === "user" ||
+                    item.role === "assistant"
+                ) {
+
+                    input.push({
+                        role: item.role,
+                        content: String(item.content)
+                    });
+
+                }
+
             }
 
-            if (item.role === "user") {
-                input.push({
-                    role: "user",
-                    content: String(item.content)
-                });
-            }
-
-            if (item.role === "assistant") {
-                input.push({
-                    role: "assistant",
-                    content: String(item.content)
-                });
-            }
         }
+
+
+        // -----------------------------------------------------
+        // CURRENT USER MESSAGE
+        // -----------------------------------------------------
 
         const currentContent = [];
 
-        if (message.trim()) {
+
+        if (String(message).trim()) {
+
             currentContent.push({
                 type: "input_text",
-                text: message.trim()
+                text: String(message).trim()
             });
+
         }
+
+
+        // -----------------------------------------------------
+        // IMAGE
+        // -----------------------------------------------------
 
         if (image) {
 
             let imageData = image;
 
-            if (!image.startsWith("data:")) {
+            if (!String(image).startsWith("data:")) {
+
                 imageData =
-                    "data:" +
-                    imageType +
-                    ";base64," +
-                    image;
+                    `data:${imageType};base64,${image}`;
+
             }
 
             currentContent.push({
+
                 type: "input_image",
+
                 image_url: imageData
+
             });
+
         }
 
+
         input.push({
+
             role: "user",
+
             content: currentContent
+
         });
 
-        console.log("PHYTO is thinking...");
 
-        const response = await openai.responses.create({
-            model: MODEL,
-            instructions: PHYTO_INSTRUCTIONS,
-            input: input,
-            max_output_tokens: 2000
-        });
+        // -----------------------------------------------------
+        // OPENAI
+        // -----------------------------------------------------
+
+        const response =
+            await openai.responses.create({
+
+                model: MODEL,
+
+                instructions:
+                    PHYTO_INSTRUCTIONS +
+                    `\n\nCurrent topic: ${topic}`,
+
+                input: input,
+
+                max_output_tokens: 2000
+
+            });
+
 
         const reply =
             response.output_text ||
             "Sorry, PHYTO could not generate a response.";
 
-        console.log("PHYTO replied.");
 
-        res.json({
+        return res.status(200).json({
+
             reply: reply
+
         });
 
-    } catch (error) {
+    }
 
-        console.error("PHYTO ERROR:");
-        console.error(error);
 
-        res.status(500).json({
+    catch (error) {
+
+        console.error("PHYTO ERROR:", error);
+
+        return res.status(500).json({
+
             error:
                 error.message ||
                 "PHYTO could not connect to the AI service."
+
         });
+
     }
+
 });
+
+
+// =========================================================
+// HEALTH CHECK
+// =========================================================
 
 app.get("/api/health", (req, res) => {
 
     res.json({
+
         status: "ok",
+
         chatbot: "PHYTO",
+
         model: MODEL
+
     });
+
 });
+
+
+// =========================================================
+// WEBSITE
+// =========================================================
 
 app.get("/", (req, res) => {
 
     res.sendFile(
         path.join(__dirname, "index3.html")
     );
-});
-
-app.listen(PORT, () => {
-
-    console.log("");
-    console.log("================================");
-    console.log("          PHYTO AI");
-    console.log("================================");
-    console.log("Server: http://localhost:" + PORT);
-    console.log("Model: " + MODEL);
-    console.log("================================");
-    console.log("");
 
 });
+
+
+// =========================================================
+// LOCAL DEVELOPMENT
+// =========================================================
+
+if (require.main === module) {
+
+    const PORT =
+        process.env.PORT || 3000;
+
+    app.listen(PORT, () => {
+
+        console.log(
+            `PHYTO running at http://localhost:${PORT}`
+        );
+
+    });
+
+}
+
+
+// IMPORTANT FOR VERCEL
+
+module.exports = app;
