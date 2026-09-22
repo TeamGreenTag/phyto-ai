@@ -1,0 +1,394 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="GreenTag AI - Plant, Botany and Agriculture Assistant"
+    >
+
+    <title>GreenTag AI</title>
+
+    <link rel="stylesheet" href="style2.css">
+</head>
+
+<body>
+
+<div class="app">
+
+    <!-- ================= HEADER ================= -->
+
+    <header class="header">
+
+        <div class="brand">
+
+            <div class="brand-logo">
+                🌿
+            </div>
+
+            <div class="brand-text">
+
+                <h1>PHYTO</h1>
+
+                <p>
+                    Plant • Botany • Agriculture
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="header-actions">
+
+            <button
+                id="clearChat"
+                class="header-button"
+                title="Clear chat"
+            >
+                ↻
+            </button>
+
+            <div class="online">
+
+                <span></span>
+
+                Online
+
+            </div>
+
+        </div>
+
+    </header>
+
+
+    <!-- ================= TOPIC BAR ================= -->
+
+    <div class="topic-bar">
+
+        <button
+            class="topic active"
+            data-topic="general"
+        >
+            🌿 General
+        </button>
+
+        <button
+            class="topic"
+            data-topic="botany"
+        >
+            🔬 Botany
+        </button>
+
+        <button
+            class="topic"
+            data-topic="agriculture"
+        >
+            🌾 Agriculture
+        </button>
+
+        <button
+            class="topic"
+            data-topic="horticulture"
+        >
+            🌼 Horticulture
+        </button>
+
+        <button
+            class="topic"
+            data-topic="disease"
+        >
+            🦠 Diseases
+        </button>
+
+        <button
+            class="topic"
+            data-topic="fertilizer"
+        >
+            🧪 Fertilizers
+        </button>
+
+        <button
+            class="topic"
+            data-topic="soil"
+        >
+            🌱 Soil
+        </button>
+
+        <button
+            class="topic"
+            data-topic="weather"
+        >
+            ☀️ Weather
+        </button>
+
+        <button
+            class="topic"
+            data-topic="exam"
+        >
+            📚 Exam Mode
+        </button>
+
+    </div>
+
+
+    <!-- ================= CHAT ================= -->
+
+    <main
+        id="chatContainer"
+        class="chat-container"
+    >
+
+        <div
+            id="chatBox"
+            class="chat-box"
+        >
+
+            <!-- WELCOME -->
+
+            <div class="message bot">
+
+                <div class="avatar">
+                    🌿
+                </div>
+
+                <div class="message-body">
+
+                    <div class="sender">
+                        GreenTag AI
+                    </div>
+
+                    <div class="bubble welcome">
+
+                        <h2>
+                            Hello, plant explorer! 🌱
+                        </h2>
+
+                        <p>
+                            I can help you understand almost
+                            anything related to plants, botany,
+                            agriculture and horticulture.
+                        </p>
+
+                        <div class="capabilities">
+
+                            <div>
+                                🌱
+                                <span>Plant Science</span>
+                            </div>
+
+                            <div>
+                                🔬
+                                <span>Botany</span>
+                            </div>
+
+                            <div>
+                                🌾
+                                <span>Agriculture</span>
+                            </div>
+
+                            <div>
+                                🦠
+                                <span>Plant Diseases</span>
+                            </div>
+
+                            <div>
+                                🐛
+                                <span>Pests</span>
+                            </div>
+
+                            <div>
+                                🧪
+                                <span>Fertilizers</span>
+                            </div>
+
+                            <div>
+                                🌍
+                                <span>Soil</span>
+                            </div>
+
+                            <div>
+                                ☀️
+                                <span>Weather</span>
+                            </div>
+
+                        </div>
+
+                        <p class="ask-title">
+                            Try asking:
+                        </p>
+
+                        <div class="suggestions">
+
+                            <button onclick="askSuggestion(
+                                'Why are my plant leaves turning yellow?'
+                            )">
+                                🍃 Why are my leaves yellow?
+                            </button>
+
+                            <button onclick="askSuggestion(
+                                'Explain photosynthesis in simple words.'
+                            )">
+                                🔬 Explain photosynthesis
+                            </button>
+
+                            <button onclick="askSuggestion(
+                                'What are the major diseases of tomato?'
+                            )">
+                                🍅 Tomato diseases
+                            </button>
+
+                            <button onclick="askSuggestion(
+                                'Explain NPK fertilizer.'
+                            )">
+                                🧪 Explain NPK
+                            </button>
+
+                            <button onclick="askSuggestion(
+                                'What is the difference between monocot and dicot plants?'
+                            )">
+                                🌱 Monocot vs dicot
+                            </button>
+
+                            <button onclick="askSuggestion(
+                                'What is the weather forecast?'
+                            )">
+                                ☀️ Weather
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- TYPING -->
+
+        <div
+            id="typing"
+            class="typing hidden"
+        >
+
+            <div class="avatar">
+                🌿
+            </div>
+
+            <div class="typing-bubble">
+
+                <span></span>
+                <span></span>
+                <span></span>
+
+            </div>
+
+        </div>
+
+    </main>
+
+
+    <!-- ================= IMAGE PREVIEW ================= -->
+
+    <div
+        id="imagePreview"
+        class="image-preview hidden"
+    >
+
+        <img
+            id="previewImage"
+            src=""
+            alt="Plant image preview"
+        >
+
+        <button
+            id="removeImage"
+            title="Remove image"
+        >
+            ×
+        </button>
+
+    </div>
+
+
+    <!-- ================= INPUT ================= -->
+
+    <footer class="input-area">
+
+        <div class="input-box">
+
+            <input
+                type="file"
+                id="imageInput"
+                accept="image/*"
+                hidden
+            >
+
+            <button
+                id="imageButton"
+                class="tool-button"
+                title="Upload plant image"
+            >
+                📷
+            </button>
+
+
+            <textarea
+                id="messageInput"
+                rows="1"
+                placeholder="Ask anything about plants, botany, agriculture..."
+                autocomplete="off"
+            ></textarea>
+
+
+            <button
+                id="micButton"
+                class="tool-button"
+                title="Voice input"
+            >
+                🎤
+            </button>
+
+
+            <button
+    type="button"
+    id="sendButton"
+    class="send-button"
+    title="Send"
+    onclick="sendMessage()"
+>
+    ➤
+</button>
+        </div>
+
+
+        <div class="input-note">
+
+            GreenTag AI can provide educational information.
+            Verify important agricultural treatment decisions
+            with a qualified local expert.
+
+        </div>
+
+    </footer>
+
+</div>
+
+
+<script src="script.js"></script>
+
+
+
+</body>
+</html>
+```
