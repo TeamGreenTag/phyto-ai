@@ -1,6 +1,7 @@
-const OpenAI = require("openai");
+const { GoogleGenAI } = require("@google/genai");
 
-const MODEL = process.env.OPENAI_MODEL || "gpt-5.6-luna";
+const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+
 
 const PHYTO_INSTRUCTIONS = `
 You are PHYTO, an intelligent AI assistant specializing in plants, botany,
@@ -53,27 +54,15 @@ You are PHYTO.
 module.exports = async (req, res) => {
 
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader(
-        "Access-Control-Allow-Methods",
-        "POST, OPTIONS"
-    );
-    res.setHeader(
-        "Access-Control-Allow-Headers",
-        "Content-Type"
-    );
+    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-    if (req.method === "OPTIONS") {
-        return res.status(200).end();
-    }
-
+    if (req.method === "OPTIONS") return res.status(200).end();
     if (req.method !== "POST") {
-        return res.status(405).json({
-            error: "Method not allowed"
-        });
+        return res.status(405).json({ error: "Method not allowed" });
     }
 
     try {
-
         const {
             message = "",
             history = [],
@@ -87,99 +76,62 @@ module.exports = async (req, res) => {
             });
         }
 
-        if (!process.env.OPENAI_API_KEY) {
+        if (!process.env.GEMINI_API_KEY) {
             return res.status(500).json({
-                error: "OPENAI_API_KEY is not configured in Vercel."
+                error: "GEMINI_API_KEY is not configured in Vercel."
             });
         }
 
-        const openai = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY
-        });
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-        const input = [];
+        const contents = [];
 
         if (Array.isArray(history)) {
-
             for (const item of history) {
-
-                if (!item || !item.content) {
-                    continue;
-                }
-
-                if (
-                    item.role === "user" ||
-                    item.role === "assistant"
-                ) {
-
-                    input.push({
-                        role: item.role,
-                        content: String(item.content)
+                if (!item || !item.content) continue;
+                if (item.role === "user" || item.role === "assistant") {
+                    contents.push({
+                        role: item.role === "assistant" ? "model" : "user",
+                        parts: [{ text: String(item.content) }]
                     });
-
                 }
             }
         }
 
-        const currentContent = [];
-
+        const parts = [];
         if (String(message).trim()) {
-
-            currentContent.push({
-                type: "input_text",
-                text: String(message).trim()
-            });
-
+            parts.push({ text: String(message).trim() });
         }
 
         if (image) {
+            const base64Data = String(image).startsWith("data:")
+                ? String(image).split(",")[1]
+                : image;
 
-            let imageData = image;
-
-            if (!String(image).startsWith("data:")) {
-
-                imageData =
-                    `data:${imageType};base64,${image}`;
-
-            }
-
-            currentContent.push({
-                type: "input_image",
-                image_url: imageData
+            parts.push({
+                inlineData: { mimeType: imageType, data: base64Data }
             });
         }
 
-        input.push({
-            role: "user",
-            content: currentContent
+        contents.push({ role: "user", parts });
+
+        const response = await ai.models.generateContent({
+            model: MODEL,
+            contents: contents,
+            config: {
+                systemInstruction: PHYTO_INSTRUCTIONS,
+                maxOutputTokens: 2000
+            }
         });
 
-        const response =
-            await openai.responses.create({
-                model: MODEL,
-                instructions: PHYTO_INSTRUCTIONS,
-                input: input,
-                max_output_tokens: 2000
-            });
-
         return res.status(200).json({
-
-            reply:
-                response.output_text ||
-                "Sorry, PHYTO could not generate a response."
-
+            reply: response.text || "Sorry, PHYTO could not generate a response."
         });
 
     } catch (error) {
-
         console.error("PHYTO ERROR:", error);
-
         return res.status(500).json({
-
-            error:
-                error.message ||
-                "PHYTO could not connect to the AI service."
-
+            error: error.message || "PHYTO could not connect to the AI service."
         });
     }
 };

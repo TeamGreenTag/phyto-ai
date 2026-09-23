@@ -2,14 +2,14 @@ require("dotenv").config();
 
 const express = require("express");
 const path = require("path");
-const OpenAI = require("openai");
+const { GoogleGenAI } = require("@google/genai");
 
 const app = express();
 
-const MODEL = process.env.OPENAI_MODEL || "gpt-5.6-luna";
+const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
+const ai = new GoogleGenAI({
+    apiKey: process.env.GEMINI_API_KEY
 });
 
 
@@ -105,18 +105,74 @@ app.post("/api/chat", async (req, res) => {
             topic = "general"
         } = req.body || {};
 
-
         if (!String(message).trim() && !image) {
-
             return res.status(400).json({
                 error: "Please enter a message or upload an image."
             });
-
         }
 
+        const contents = [];
 
-        const input = [];
+        // conversation history
+        if (Array.isArray(history)) {
+            for (const item of history) {
+                if (!item || !item.content) continue;
 
+                if (item.role === "user" || item.role === "assistant") {
+                    contents.push({
+                        role: item.role === "assistant" ? "model" : "user",
+                        parts: [{ text: String(item.content) }]
+                    });
+                }
+            }
+        }
+
+        // current message
+        const parts = [];
+
+        if (String(message).trim()) {
+            parts.push({ text: String(message).trim() });
+        }
+
+        if (image) {
+            // strip "data:image/xxx;base64," prefix if present
+            const base64Data = String(image).startsWith("data:")
+                ? String(image).split(",")[1]
+                : image;
+
+            parts.push({
+                inlineData: {
+                    mimeType: imageType,
+                    data: base64Data
+                }
+            });
+        }
+
+        contents.push({ role: "user", parts });
+
+        const response = await ai.models.generateContent({
+            model: MODEL,
+            contents: contents,
+            config: {
+                systemInstruction:
+                    PHYTO_INSTRUCTIONS + `\n\nCurrent topic: ${topic}`,
+                maxOutputTokens: 2000
+            }
+        });
+
+        const reply =
+            response.text ||
+            "Sorry, PHYTO could not generate a response.";
+
+        return res.status(200).json({ reply: reply });
+
+    } catch (error) {
+        console.error("PHYTO ERROR:", error);
+        return res.status(500).json({
+            error: error.message || "PHYTO could not connect to the AI service."
+        });
+    }
+});
 
         // -----------------------------------------------------
         // CONVERSATION HISTORY
@@ -230,10 +286,12 @@ app.post("/api/chat", async (req, res) => {
 
         });
 
-    }
 
 
-    catch (error) {
+    try {
+    // ... your async logic (openai/gemini call etc.)
+} catch (error) {
+
 
         console.error("PHYTO ERROR:", error);
 
@@ -247,7 +305,7 @@ app.post("/api/chat", async (req, res) => {
 
     }
 
-});
+;
 
 
 // =========================================================
