@@ -6,7 +6,7 @@ const { GoogleGenAI } = require("@google/genai");
 
 const app = express();
 
-const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
 
 const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY
@@ -173,139 +173,6 @@ app.post("/api/chat", async (req, res) => {
         });
     }
 });
-
-        // -----------------------------------------------------
-        // CONVERSATION HISTORY
-        // -----------------------------------------------------
-
-        if (Array.isArray(history)) {
-
-            for (const item of history) {
-
-                if (!item || !item.content) {
-                    continue;
-                }
-
-                if (
-                    item.role === "user" ||
-                    item.role === "assistant"
-                ) {
-
-                    input.push({
-                        role: item.role,
-                        content: String(item.content)
-                    });
-
-                }
-
-            }
-
-        }
-
-
-        // -----------------------------------------------------
-        // CURRENT USER MESSAGE
-        // -----------------------------------------------------
-
-        const currentContent = [];
-
-
-        if (String(message).trim()) {
-
-            currentContent.push({
-                type: "input_text",
-                text: String(message).trim()
-            });
-
-        }
-
-
-        // -----------------------------------------------------
-        // IMAGE
-        // -----------------------------------------------------
-
-        if (image) {
-
-            let imageData = image;
-
-            if (!String(image).startsWith("data:")) {
-
-                imageData =
-                    `data:${imageType};base64,${image}`;
-
-            }
-
-            currentContent.push({
-
-                type: "input_image",
-
-                image_url: imageData
-
-            });
-
-        }
-
-
-        input.push({
-
-            role: "user",
-
-            content: currentContent
-
-        });
-
-
-        // -----------------------------------------------------
-        // OPENAI
-        // -----------------------------------------------------
-
-        const response =
-            await openai.responses.create({
-
-                model: MODEL,
-
-                instructions:
-                    PHYTO_INSTRUCTIONS +
-                    `\n\nCurrent topic: ${topic}`,
-
-                input: input,
-
-                max_output_tokens: 2000
-
-            });
-
-
-        const reply =
-            response.output_text ||
-            "Sorry, PHYTO could not generate a response.";
-
-
-        return res.status(200).json({
-
-            reply: reply
-
-        });
-
-
-
-    try {
-    // ... your async logic (openai/gemini call etc.)
-} catch (error) {
-
-
-        console.error("PHYTO ERROR:", error);
-
-        return res.status(500).json({
-
-            error:
-                error.message ||
-                "PHYTO could not connect to the AI service."
-
-        });
-
-    }
-
-;
 
 
 // =========================================================
